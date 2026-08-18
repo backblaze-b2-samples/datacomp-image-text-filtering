@@ -20,6 +20,7 @@ import {
   getPoolShards,
   getPreviewUrl,
   getRun,
+  getRunPairs,
   getRuns,
   getRunStats,
   getSourcePrefixes,
@@ -32,6 +33,7 @@ import type {
   FileMetadataDetail,
   FilterRun,
   RunConfig,
+  RunPairMetrics,
 } from "@datacomp-image-text-filtering/shared";
 
 // Single source of truth for query keys. Keep these tightly scoped so that
@@ -49,6 +51,7 @@ export const qk = {
   health: () => [...qk.all, "health"] as const,
   runs: () => [...qk.all, "runs"] as const,
   run: (id: string) => [...qk.all, "runs", id] as const,
+  runPairs: (id: string) => [...qk.all, "runs", id, "pairs"] as const,
   runStats: () => [...qk.all, "runs", "stats"] as const,
   sourcePrefixes: () => [...qk.all, "runs", "source-prefixes"] as const,
   poolShards: (scope: string) => [...qk.all, "pool", "shards", scope] as const,
@@ -208,6 +211,20 @@ export function useRun(id: string | undefined) {
     enabled: !!id,
     refetchInterval: (query) =>
       query.state.data?.status === "running" ? 2000 : false,
+  });
+}
+
+/**
+ * Per-pair CLIP scores (kept AND dropped) for a run, read from its metrics JSON.
+ * Gated on `enabled` (the caller passes the run's completed state) because the
+ * metrics only exist once a run finishes — fetching earlier just 200s an empty
+ * list or races the run.
+ */
+export function useRunPairs(id: string | undefined, enabled: boolean) {
+  return useQuery<RunPairMetrics, ApiError>({
+    queryKey: qk.runPairs(id ?? ""),
+    queryFn: () => getRunPairs(id as string),
+    enabled: enabled && !!id,
   });
 }
 

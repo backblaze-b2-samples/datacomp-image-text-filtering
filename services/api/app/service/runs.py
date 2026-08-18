@@ -17,6 +17,7 @@ from app.repo import (
     get_object_bytes,
     list_manifests,
     list_shards,
+    load_json,
     load_manifest,
     put_bytes,
     save_manifest,
@@ -26,6 +27,9 @@ from app.types.runs import (
     FilterRun,
     RunConfig,
     RunCreateRequest,
+    RunPairMetric,
+    RunPairMetrics,
+    RunProgress,
     RunStats,
     RunStatus,
     RunUpdateRequest,
@@ -100,12 +104,17 @@ def delete_run(run_id: str) -> None:
 
 def start_run(run_id: str) -> FilterRun:
     """Mark a run as running and persist it. The heavy work happens in
-    `execute_run` (a background task). A run already running is left as-is."""
+    `execute_run` (a background task). A run already running is left as-is.
+
+    Seeds `progress` with the shard count so the detail view's progress bar has
+    a denominator from the very first poll (before any shard has been scored)."""
     run = get_run(run_id)
     if run.status == RunStatus.running:
         return run
     run.status = RunStatus.running
     run.error = None
+    shards_total = len(list_shards(run.config.source_prefix))
+    run.progress = RunProgress(shards_done=0, shards_total=shards_total)
     return _persist(run)
 
 
@@ -116,8 +125,17 @@ def execute_run(run_id: str) -> None:
     except RunNotFoundError:
         logger.warning("execute_run: run %s vanished before execution", run_id)
         return
+
+    def _report_progress(done: int, total: int) -> None:
+        # Persist the manifest after each shard so the next 2s poll advances the
+        # bar. filtering.py stays ML-only; this is the injected persistence.
+        run.progress = RunProgress(shards_done=done, shards_total=total)
+        _persist(run)
+
     try:
-        result = filtering.run_filter(run, get_object_bytes, put_bytes, list_shards)
+        result = filtering.run_filter(
+            run, get_object_bytes, put_bytes, list_shards, on_progress=_report_progress
+        )
         _persist(result)
     except filtering.FilterEngineUnavailableError as e:
         logger.warning("Filter run %s unavailable: %s", run_id, e)
@@ -145,6 +163,42 @@ def discover_source_prefixes() -> list[SourcePrefix]:
         # before the pool is seeded.
         prefixes.append(SourcePrefix(prefix=POOL_PREFIX, shard_count=0))
     return prefixes
+
+
+def get_run_pairs(run_id: str) -> RunPairMetrics:
+    """Every scored pair (kept AND dropped) of a run, read from the per-shard
+    `metrics/<id>/*.json` the engine already wrote to B2.
+
+    Surfaces the per-pair kept-vs-dropped-with-scores detail that the aggregate
+    `shard_metrics` rows omit — the filtered `.tar` shards hold only kept pairs,
+    so this metrics JSON is the only place a DROPPED pair's low score is visible.
+    Sorted by score descending so the kept/dropped threshold boundary is easy to
+    read. Raises RunNotFoundError when the run does not exist."""
+    run = get_run(run_id)
+    pairs: list[RunPairMetric] = []
+    for shard in run.shard_metrics:
+        if not shard.metrics_key:
+            continue
+        doc = load_json(shard.metrics_key)
+        if not doc:
+            continue
+        for record in doc.get("pairs", []):
+            pairs.append(
+                RunPairMetric(
+                    key=record["key"],
+                    shard=shard.shard,
+                    caption=record["caption"],
+                    clip_score=record["clip_score"],
+                    kept=bool(record["kept"]),
+                )
+            )
+    pairs.sort(key=lambda p: p.clip_score, reverse=True)
+    return RunPairMetrics(
+        run_id=run.id,
+        clip_score_threshold=run.stats.clip_score_threshold if run.stats else None,
+        pair_count=len(pairs),
+        pairs=pairs,
+    )
 
 
 def run_stats() -> RunStats:

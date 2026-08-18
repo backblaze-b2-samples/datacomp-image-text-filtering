@@ -74,3 +74,12 @@ Low-severity polish, left for a follow-up; none blocks the core flow.
 | Custom `FileNotFoundError` shadowed the built-in | Renamed to `FileNotFoundServiceError` |
 | Dropzone accepted any file type client-side | `accept` allow-list mirroring backend `ALLOWED_TYPES` (tested for drift) |
 | No test harness for feature specs | pytest suite across upload, files, activity, errors, validation, rate limit, pagination |
+
+## 2026-08-18 — verify
+
+UX nitpicks surfaced by `/sample-3-verify` (the run's blocker/friction items were fixed in-repo; these are demoted-friction / nitpick — logged, not looped):
+
+- Pool Explorer → Filtered (output) tab — the filtered shard list flattens every run's output into identically-named `shard-000N.tar` rows with no run-id label → a first-time user can't tell from the list which filtered shard belongs to their run (worsens as runs accumulate). Secondary path; the run-detail per-pair scores table is the primary, unambiguous route. (`.local/verify/A2/16-filtered-tab-clean.png`)
+- New Filter Run — creating a run yields a `Pending` run that needs a separate "Start run" click; there is no combined "Create & run" one-shot. Intended lifecycle (a pending run is editable first) and well-signposted, so a nitpick. (`.local/verify/A2/10-pending-run-detail.png`)
+- New-run form — the "Keep fraction (CLIP percentile)" number input renders as "0,3" (decimal-comma) under some browser locales; the value still submits correctly as 0.3. Cosmetic. (`.local/verify/A2/03-new-run-form-defaults.png`)
+- Completed run detail — the pointer to the Pool Explorer is an understated inline text link rather than a prominent CTA (largely mitigated now that the per-pair kept/dropped scores render inline on the run detail). (`.local/verify/A/06-run-completed.png`)

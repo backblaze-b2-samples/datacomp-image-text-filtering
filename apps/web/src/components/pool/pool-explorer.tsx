@@ -174,7 +174,11 @@ export function PoolExplorer() {
               <EmptyState
                 icon={PackageOpen}
                 title="Open a shard"
-                description="Select a shard to view the image-text pairs inside it — thumbnail, caption, CLIP score, and kept/dropped."
+                description={
+                  scope === "pool"
+                    ? "Select a shard to see its image-text pairs — thumbnail, caption, and resolution. Raw pool pairs are pre-filter, so CLIP scores and kept/dropped decisions appear only after a run — open the run's detail page for the full kept-vs-dropped breakdown with scores."
+                    : "Select a shard to see the kept image-text pairs — thumbnail, caption, and CLIP score. To also see which pairs were dropped and their low scores, open the run's detail page."
+                }
               />
             )}
           </CardContent>

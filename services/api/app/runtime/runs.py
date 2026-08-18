@@ -12,6 +12,7 @@ from app.service.runs import (
     discover_source_prefixes,
     execute_run,
     get_run,
+    get_run_pairs,
     list_runs,
     run_stats,
     start_run,
@@ -21,6 +22,7 @@ from app.types import (
     DeleteRunResponse,
     FilterRun,
     RunCreateRequest,
+    RunPairMetrics,
     RunStats,
     RunUpdateRequest,
     SourcePrefix,
@@ -60,6 +62,16 @@ def create_run_endpoint(req: RunCreateRequest):
 def get_run_endpoint(run_id: str):
     try:
         return get_run(run_id)
+    except RunNotFoundError as e:
+        raise HTTPException(status_code=404, detail=e.detail) from None
+
+
+@router.get("/runs/{run_id}/pairs", response_model=RunPairMetrics)
+def get_run_pairs_endpoint(run_id: str):
+    """Per-pair CLIP scores (kept AND dropped) for a run, read from its metrics
+    JSON — the only place a dropped pair's low score is visible in the UI."""
+    try:
+        return get_run_pairs(run_id)
     except RunNotFoundError as e:
         raise HTTPException(status_code=404, detail=e.detail) from None
 

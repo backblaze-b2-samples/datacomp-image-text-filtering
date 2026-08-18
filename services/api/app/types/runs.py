@@ -73,6 +73,15 @@ class FilterStats(BaseModel):
     device: str | None = None
 
 
+class RunProgress(BaseModel):
+    """Mid-run advancement for a determinate progress bar. `shards_total` is set
+    at start (from the pool listing) so the bar has a denominator on the first
+    poll; `shards_done` is bumped after each shard is scored in pass 1."""
+
+    shards_done: int
+    shards_total: int
+
+
 class FilterRun(BaseModel):
     id: str
     config: RunConfig
@@ -84,7 +93,29 @@ class FilterRun(BaseModel):
     metrics_prefix: str | None = None
     shard_metrics: list[ShardMetric] = Field(default_factory=list)
     stats: FilterStats | None = None
+    progress: RunProgress | None = None
     error: str | None = None
+
+
+class RunPairMetric(BaseModel):
+    """One scored image-text pair from a completed run's metrics JSON — the
+    per-pair kept-vs-dropped detail the aggregate `ShardMetric` rows omit."""
+
+    key: str
+    shard: str
+    caption: str
+    clip_score: float
+    kept: bool
+
+
+class RunPairMetrics(BaseModel):
+    """Every scored pair of a completed run (kept AND dropped), sorted by score,
+    so the UI can show which pairs CLIP dropped and why."""
+
+    run_id: str
+    clip_score_threshold: float | None = None
+    pair_count: int
+    pairs: list[RunPairMetric]
 
 
 class RunCreateRequest(RunConfig):

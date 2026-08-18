@@ -116,6 +116,12 @@ export interface FilterStats {
   device: string | null;
 }
 
+/** Mid-run advancement for the detail view's determinate progress bar. */
+export interface RunProgress {
+  shards_done: number;
+  shards_total: number;
+}
+
 export interface FilterRun {
   id: string;
   config: RunConfig;
@@ -127,7 +133,26 @@ export interface FilterRun {
   metrics_prefix: string | null;
   shard_metrics: ShardMetric[];
   stats: FilterStats | null;
+  progress: RunProgress | null;
   error: string | null;
+}
+
+/** One scored image-text pair (kept OR dropped) from a run's metrics JSON. */
+export interface RunPairMetric {
+  key: string;
+  shard: string;
+  caption: string;
+  clip_score: number;
+  kept: boolean;
+}
+
+/** Every scored pair of a run, sorted by score — the per-pair kept-vs-dropped
+ *  detail the aggregate ShardMetric rows omit. */
+export interface RunPairMetrics {
+  run_id: string;
+  clip_score_threshold: number | null;
+  pair_count: number;
+  pairs: RunPairMetric[];
 }
 
 export interface DeleteRunResponse {

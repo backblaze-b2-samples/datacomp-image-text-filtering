@@ -2,9 +2,17 @@
 # Feature: Pool Explorer
 
 ## Purpose
-Inspect the image-text pairs inside a WebDataset shard — thumbnail, caption,
-CLIP score, and kept/dropped decision — scoped to the sample's own `pool/` (raw)
-and `filtered/` (output) prefixes.
+Inspect the image-text pairs inside a WebDataset shard, scoped to the sample's
+own `pool/` (raw) and `filtered/` (output) prefixes. What each tab can show
+differs, and the empty-state guidance is written per-tab so it never
+over-promises:
+- **Pool (raw)** — pre-filter pairs: thumbnail, caption, resolution. There is no
+  CLIP score or kept/dropped decision here (those only exist after a run).
+- **Filtered (output)** — KEPT pairs only, each with a "kept" badge + CLIP score.
+
+The full kept-vs-dropped-with-scores breakdown — including the DROPPED pairs and
+their low scores, which no shard `.tar` contains — lives on the run detail page
+(`GET /runs/{id}/pairs`, rendered by `run-pair-scores.tsx`), not here.
 
 ## Used By
 - UI: `/pool` page (scope tabs → shard list → pairs grid)
@@ -39,7 +47,10 @@ and `filtered/` (output) prefixes.
 - Large shard → capped at 60 pairs; `pair_count` vs `shown` are reported
 
 ## UX States
-- Empty: "No raw shards" / "No filtered shards" (points at the seed script / running a filter)
+- Empty (no shard selected): per-tab "Open a shard" guidance — the Pool tab
+  promises only thumbnail/caption/resolution and points to the run detail for
+  scores + kept/dropped; the Filtered tab promises kept pairs + CLIP score
+- Empty (no shards): "No raw shards" / "No filtered shards" (points at the seed script / running a filter)
 - Loading: skeleton grid
 - Loaded: image-text pair grid
 - Error: inline retry

@@ -15,6 +15,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { RunForm, CREATE_DEFAULTS } from "./run-form";
+import { LoadingNotice } from "@/components/common/loading-notice";
 import { useCreateRun, useSourcePrefixes } from "@/lib/queries";
 
 export function CreateRunDialog({ label = "New run" }: { label?: string }) {
@@ -44,27 +45,31 @@ export function CreateRunDialog({ label = "New run" }: { label?: string }) {
             Configure a DataComp-style CLIP filter over a pool of image-text shards.
           </DialogDescription>
         </DialogHeader>
-        <RunForm
-          mode="create"
-          key={open ? prefixes.length : "closed"}
-          defaultValues={defaults}
-          prefixes={prefixes}
-          submitting={create.isPending}
-          onCancel={() => setOpen(false)}
-          onSubmit={(config) =>
-            create.mutate(config, {
-              onSuccess: (run) => {
-                toast.success("Run created", {
-                  description: "Start it to filter the pool with CLIP.",
-                });
-                setOpen(false);
-                router.push(`/runs/${run.id}`);
-              },
-              onError: (e) =>
-                toast.error("Couldn't create run", { description: e.message }),
-            })
-          }
-        />
+        {prefixesQuery.isLoading ? (
+          <LoadingNotice subject="pools" className="py-6" />
+        ) : (
+          <RunForm
+            mode="create"
+            key={open ? "open" : "closed"}
+            defaultValues={defaults}
+            prefixes={prefixes}
+            submitting={create.isPending}
+            onCancel={() => setOpen(false)}
+            onSubmit={(config) =>
+              create.mutate(config, {
+                onSuccess: (run) => {
+                  toast.success("Run created", {
+                    description: "Start it to filter the pool with CLIP.",
+                  });
+                  setOpen(false);
+                  router.push(`/runs/${run.id}`);
+                },
+                onError: (e) =>
+                  toast.error("Couldn't create run", { description: e.message }),
+              })
+            }
+          />
+        )}
       </DialogContent>
     </Dialog>
   );

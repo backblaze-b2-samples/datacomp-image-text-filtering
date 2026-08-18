@@ -114,6 +114,102 @@ def test_execute_run_persists_failed_on_engine_error(mem_store):
     assert "requirements-ml.txt" in stored["error"]
 
 
+async def test_run_pairs_surfaces_dropped_scores(client, mem_store, monkeypatch):
+    """The per-pair endpoint exposes DROPPED pairs and their low scores — the
+    filtered .tar holds only kept pairs, so this reads the run's metrics JSON."""
+    created = (await client.post("/runs", json={"name": "scored"})).json()
+    rid = created["id"]
+    stored = mem_store[rid]
+    stored["status"] = "completed"
+    stored["shard_metrics"] = [
+        {
+            "shard": "shard-0000.tar",
+            "pairs_in": 2,
+            "pairs_kept": 1,
+            "pairs_dropped": 1,
+            "mean_clip_score": 0.2,
+            "kept_mean_clip_score": 0.3,
+            "output_key": f"filtered/{rid}/shard-0000.tar",
+            "metrics_key": f"metrics/{rid}/shard-0000.json",
+        }
+    ]
+    stored["stats"] = {
+        "total_pairs_in": 2,
+        "total_pairs_kept": 1,
+        "total_pairs_dropped": 1,
+        "reduction_pct": 50.0,
+        "mean_clip_score": 0.2,
+        "clip_score_threshold": 0.25,
+        "device": "cpu",
+    }
+    doc = {
+        "shard": "shard-0000.tar",
+        "clip_score_threshold": 0.25,
+        "device": "cpu",
+        "pair_count": 2,
+        "pairs": [
+            {"key": "a", "caption": "a kept pair", "clip_score": 0.3, "kept": True},
+            {"key": "b", "caption": "a dropped pair", "clip_score": 0.1, "kept": False},
+        ],
+    }
+    monkeypatch.setattr(runs_service, "load_json", lambda key: doc)
+
+    resp = await client.get(f"/runs/{rid}/pairs")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["pair_count"] == 2
+    assert body["clip_score_threshold"] == 0.25
+    # Sorted by score descending: kept 0.3 first.
+    assert body["pairs"][0]["kept"] is True
+    dropped = [p for p in body["pairs"] if not p["kept"]]
+    assert len(dropped) == 1
+    assert dropped[0]["clip_score"] == 0.1
+    assert dropped[0]["caption"] == "a dropped pair"
+
+
+async def test_run_pairs_missing_run_404(client, mem_store):
+    assert (await client.get("/runs/nope/pairs")).status_code == 404
+
+
+async def test_start_run_seeds_progress_total(client, mem_store, monkeypatch):
+    """start_run seeds shards_total from the pool listing so the progress bar
+    has a denominator from the very first poll."""
+    monkeypatch.setattr(
+        runs_service,
+        "list_shards",
+        lambda prefix: [
+            {"key": "pool/a.tar", "size": 1, "last_modified": 0},
+            {"key": "pool/b.tar", "size": 1, "last_modified": 0},
+        ],
+    )
+    created = (await client.post("/runs", json={"name": "go"})).json()
+    resp = await client.post(f"/runs/{created['id']}/run")
+    assert resp.status_code == 200
+    assert resp.json()["progress"] == {"shards_done": 0, "shards_total": 2}
+
+
+def test_execute_run_reports_progress(mem_store, monkeypatch):
+    """execute_run injects an on_progress callback that persists mid-run
+    advancement, so a poll during pass 1 sees the determinate bar move."""
+    from app.types.runs import RunCreateRequest, RunStatus
+
+    seen: list[dict] = []
+
+    def fake_run_filter(run, gb, pb, ls, on_progress=None):
+        assert on_progress is not None
+        on_progress(1, 2)
+        seen.append(dict(mem_store[run.id]["progress"]))
+        on_progress(2, 2)
+        return run.model_copy(update={"status": RunStatus.completed})
+
+    monkeypatch.setattr(filtering, "run_filter", fake_run_filter)
+    run = runs_service.create_run(RunCreateRequest(name="prog"))
+    runs_service.execute_run(run.id)
+    assert seen[0] == {"shards_done": 1, "shards_total": 2}
+    assert mem_store[run.id]["status"] == "completed"
+    assert mem_store[run.id]["progress"]["shards_done"] == 2
+
+
 async def test_run_stats_empty(client, mem_store):
     resp = await client.get("/runs/stats")
     assert resp.status_code == 200

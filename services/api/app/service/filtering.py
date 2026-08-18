@@ -25,7 +25,7 @@ from app.service.filter_ops import (
     count_tokens,
     read_webdataset_pairs,
 )
-from app.types.runs import FilterRun, FilterStats, RunStatus, ShardMetric
+from app.types.runs import FilterRun, FilterStats, RunProgress, RunStatus, ShardMetric
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +39,10 @@ ML_HINT = (
 GetBytes = Callable[[str], bytes]
 PutBytes = Callable[[str, bytes, str], None]
 ListShards = Callable[[str], list[dict]]
+# (shards_done, shards_total) — invoked after each shard is scored in pass 1 so
+# the caller can persist mid-run progress. Persistence is injected here on
+# purpose: this module stays ML-only and never imports repo/boto3.
+ProgressCallback = Callable[[int, int], None]
 
 
 class FilterEngineUnavailableError(RuntimeError):
@@ -173,6 +177,7 @@ def run_filter(
     get_bytes: GetBytes,
     put_bytes: PutBytes,
     list_shards: ListShards,
+    on_progress: ProgressCallback | None = None,
 ) -> FilterRun:
     """Stream pool shards from B2, CLIP-score them, and write filtered shards +
     metrics back to B2. Returns the run updated to `completed` with full stats.
@@ -215,6 +220,9 @@ def run_filter(
         )
         per_shard.append((name, scored, payloads))
         all_pairs.extend(scored)
+        if on_progress is not None:
+            # len(per_shard) shards are now scored out of len(shards) total.
+            on_progress(len(per_shard), len(shards))
 
     flags, threshold = apply_filters(all_pairs, run.config)
     keep_by_key = {p.key: f for p, f in zip(all_pairs, flags, strict=True)}
@@ -274,6 +282,9 @@ def run_filter(
             "stats": stats,
             "shard_metrics": shard_metrics,
             "source_shard_count": len(shards),
+            "progress": RunProgress(
+                shards_done=len(shards), shards_total=len(shards)
+            ),
             "error": None,
             "updated_at": datetime.now(UTC),
         }

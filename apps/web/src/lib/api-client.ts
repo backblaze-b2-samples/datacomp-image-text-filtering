@@ -7,6 +7,7 @@ import type {
   FilterRun,
   PresignUploadResponse,
   RunConfig,
+  RunPairMetrics,
   RunStats,
   ShardContents,
   ShardSummary,
@@ -54,6 +55,7 @@ export const API_CLIENT_ROUTES = {
   runStats: { method: "get", path: "/runs/stats" },
   sourcePrefixes: { method: "get", path: "/runs/source-prefixes" },
   run: { method: "get", path: "/runs/{run_id}" },
+  runPairs: { method: "get", path: "/runs/{run_id}/pairs" },
   updateRun: { method: "put", path: "/runs/{run_id}" },
   deleteRun: { method: "delete", path: "/runs/{run_id}" },
   startRun: { method: "post", path: "/runs/{run_id}/run" },
@@ -391,6 +393,12 @@ export async function getRuns() {
 
 export async function getRun(runId: string) {
   return apiFetch<FilterRun>(runPath(runId));
+}
+
+/** Per-pair CLIP scores (kept AND dropped) for a completed run — read from the
+ *  run's metrics JSON, the only place a dropped pair's low score is visible. */
+export async function getRunPairs(runId: string) {
+  return apiFetch<RunPairMetrics>(runPath(runId, "/pairs"));
 }
 
 export async function getRunStats() {

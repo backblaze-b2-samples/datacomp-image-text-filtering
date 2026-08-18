@@ -18,8 +18,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Progress } from "@/components/ui/progress";
 import { ErrorState } from "@/components/ui/error-state";
 import { RunStatusBadge } from "./run-status-badge";
+import { RunPairScores } from "./run-pair-scores";
 import { EditRunDialog } from "./edit-run-dialog";
 import { DeleteRunDialog } from "./delete-run-dialog";
 import { useCreateRun, useRun, useStartRun } from "@/lib/queries";
@@ -122,8 +124,25 @@ export function RunDetail({ runId }: { runId: string }) {
           <Loader2 className="h-4 w-4 animate-spin" />
           <AlertTitle>Filtering in progress</AlertTitle>
           <AlertDescription>
-            Streaming shards from B2 and scoring image-text alignment with CLIP.
-            This view refreshes automatically.
+            <p>
+              Streaming shards from B2 and scoring image-text alignment with
+              CLIP. This view refreshes automatically.
+            </p>
+            {run.progress && run.progress.shards_total > 0 && (
+              <div className="mt-3 w-full max-w-md space-y-1.5">
+                <div className="flex items-center justify-between text-xs text-muted-foreground tabular-nums">
+                  <span>Scoring shards</span>
+                  <span className="font-mono">
+                    {run.progress.shards_done} of {run.progress.shards_total}
+                  </span>
+                </div>
+                <Progress
+                  value={Math.round(
+                    (run.progress.shards_done / run.progress.shards_total) * 100
+                  )}
+                />
+              </div>
+            )}
           </AlertDescription>
         </Alert>
       )}
@@ -220,6 +239,8 @@ export function RunDetail({ runId }: { runId: string }) {
           </CardContent>
         </Card>
       )}
+
+      <RunPairScores runId={run.id} enabled={run.status === "completed"} />
 
       {run.status === "pending" && (
         <EditRunDialog run={run} open={editing} onOpenChange={setEditing} />
