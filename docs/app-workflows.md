@@ -1,53 +1,53 @@
-<!-- last_verified: 2026-08-06 -->
+<!-- last_verified: 2026-08-18 -->
 # App Workflows
 
 User journeys inside the application.
 
-## Upload Files
+## Create and Run a Filter Run (primary)
 
-- User navigates to `/upload`
-- Drops or selects files in the dropzone
-- Client validates file size (max 100MB) and type
-- Files upload **directly from the browser to B2** (a presigned PUT). A determinate progress bar tracks the bytes leaving the browser; once they are all sent the row switches to "Verifying upload..." with an *indeterminate* sweeping bar while the API HEADs and magic-byte-sniffs the stored object. That phase has no percentage to report, and a bar parked at a full 100% read as finished-but-stuck
-- On success: toast notification, green checkmark, and a "View in Files" link through to the browser
-- On failure: red status icon with error message
-- User can clear completed uploads
-- The queue lives in an app-wide provider: navigating to another page keeps the upload running, shows an "Uploading N files" indicator in the header, and keeps the duplicate-upload guard armed
-- Reloading or closing mid-upload asks for confirmation first; if the upload dies anyway, the next load says which file didn't finish
-- See: [File Upload](features/file-upload.md)
+- User navigates to `/runs` and clicks **New run**
+- The create form uses selectors for every finite field (source pool, CLIP model, strategy, dedup) and free text only for the run name; safe defaults are surfaced as guidance (placeholder / description), never auto-filled by a button
+- On submit, a `pending` run is created (a B2 manifest) and the user lands on `/runs/[id]`
+- The user reviews the config; a **pending** run can be **edited** (config pre-filled) or **deleted**
+- Clicking **Start run** marks it `running` and schedules a background task: the CLIP filter engine streams `pool/` shards from B2, auto-detects the device (CUDA → MPS → CPU), scores every image-text pair, applies the strategy, and writes `filtered/<id>/*.tar` + `metrics/<id>/*.json` back to B2
+- The detail view auto-refreshes every 2s while running, then shows kept/dropped counts, storage-reduction %, mean CLIP score, threshold, device, and a per-shard metrics table
+- A completed/running run is immutable — the detail view offers **Clone** to start a new pending run from the same config
+- If the ML stack is not installed (or the pool is empty), the run is persisted `failed` with an actionable message — the Start POST never errors
+- See: [Filter Runs](features/filter-runs.md)
 
-## Browse and Manage Files
+## Explore the Pool
 
-- User navigates to `/files`
-- Page loads the 100 most recent objects from the API (sorted most recent first). While it loads, the page says so on screen and escalates the wording if the wait runs long — a full bucket listing measured 2.8s-21s cold
-- If that limit was hit, a notice states how many objects the bucket actually holds — the page never claims to show everything
-- Files displayed in tree view with folders and type-specific icons
-- Folders auto-expand on load until the *majority* of the listed files are reachable without clicking, so the page's own "click a file" instruction is always actionable. Stopping at the first visible file was not enough: one stray top-level object left the other 99 sealed in collapsed folders while the page claimed to show 100
-- Clicking a file row opens its preview; the per-row actions menu (preview / download / delete) is always visible, on every viewport
-- Arriving at `/files?preview=<key>` expands that file's folders and opens its preview directly. This is how the ⌘K palette and the dashboard's recent-uploads rows hand off a *specific* file; the param is consumed on arrival so it doesn't re-fire later
-- **Preview**: opens dialog with image/PDF preview + metadata panel, and the file's Download / Delete actions — the advertised "click a file" path offers everything the row menu does. The loading state holds until the media paints; a failure offers "Open in a new tab". The preview URL is signed with `Content-Disposition: inline` so PDFs render in place
-- **Download**: shows a pending state on the row plus a toast while the presigned URL is fetched, then starts the download via an anchor click (which, unlike a popup, still works if the click's user activation expired during a slow presign). Failures are reported; the click can never silently do nothing
-- **Delete**: the confirmation dialog stays open showing "Deleting..." until the request settles, then the row disappears with the toast (optimistic cache update) and the list reconciles with the server. The dialog is held deliberately — Radix closes on action click by default, which dismissed the only pending state and left the row looking untouched while the delete was still in flight
-- Empty bucket shows "No files found" with upload prompt
-- See: [File Browser](features/file-browser.md)
+- User navigates to `/pool` and picks a scope tab: **Pool (raw)** or **Filtered (output)**
+- The shard list loads for that scope; clicking a shard opens it
+- The pairs grid shows each image-text pair: thumbnail, caption, dimensions, and — for filtered shards — its CLIP score and a kept/dropped badge (read from the run's metrics JSON)
+- The explorer is scoped to `pool/` and `filtered/` (contrast with the full-bucket Bucket Explorer); out-of-scope keys are rejected server-side
+- See: [Pool Explorer](features/pool-explorer.md)
+
+## Ingest shards (upload)
+
+- User navigates to `/upload` (Ingest)
+- Drops or selects files; the client validates size (max 100MB) and type
+- Files upload **directly from the browser to B2** (a presigned PUT) with a determinate progress bar, then an indeterminate "Verifying upload…" phase while the API HEADs and magic-byte-sniffs the stored object
+- The seed script (`services/api/scripts/seed_pool.py`) is the keyless alternative that populates a synthetic demo pool
+- See: [Ingest (File Upload)](features/file-upload.md)
+
+## Browse the Bucket (Bucket Explorer)
+
+- User navigates to `/files` (Bucket Explorer)
+- The page loads the most recent objects across the WHOLE bucket — pool shards, filtered output, run manifests, metrics — in a tree view with preview / download / delete
+- Arriving at `/files?preview=<key>` opens a specific object's preview directly (used by the ⌘K palette)
+- See: [Bucket Explorer](features/file-browser.md)
 
 ## View Dashboard
 
 - User navigates to `/` (home)
-- Three parallel API calls load: stats, recent files, upload activity — all served from one shared bucket listing that the API warms at startup
-- While stats load, the page states it in words above the cards rather than showing silent skeletons
-- Stats cards show: total files, storage used, uploads today, total downloads
-- Upload chart shows last 7 days of upload activity as bar chart
-- Recent uploads table shows last 10 files with filename, size, type, date. Each filename links to that file's preview on `/files` — `/files` teaches "click a file to preview it", so the same gesture here has to answer rather than being inert text
-- Empty state: "No files uploaded yet" messages
+- Stat cards show total runs, completed runs, pairs kept, and average storage reduction
+- The recent runs table links each run to its detail view; a **New run** button opens the create dialog
+- Empty state: "No runs yet" with a create CTA
 - See: [Dashboard](features/dashboard.md)
 
 ## Change Preferences
 
 - User navigates to `/settings`
-- A banner at the top states that the page is mostly a demonstration: only Theme is wired up for real, the rest showcases what a settings page can look like when you adapt the kit
-- **Theme** (real): editing it and saving applies it immediately and persists it (`next-themes`), and the header's theme toggle drives the same state
-- **Profile and preference fields** (demo): Display name, Bio, Default file view (Tree/List/Grid), Email me on every upload, Warn me when approaching quota + threshold. Each is labelled "Demo field", persists to `localStorage` only, and drives no behaviour — there is no account system, mailer, quota banner, activity log, or List/Grid view behind them yet
-- Saving reports honestly: a success toast that separates the real theme change from the locally-stored demo values, or a warning toast if the browser blocked storage (theme still changes). It never claims a save that did not happen — the original page toasted "Settings saved" for fields that changed nothing
-- Danger Zone actions are a demo — no real delete runs
+- A banner states the page is mostly a demonstration: only **Theme** is wired up for real (via `next-themes`); the rest persists to `localStorage` only
 - See: [Settings](features/settings.md)

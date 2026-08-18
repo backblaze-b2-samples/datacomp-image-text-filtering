@@ -2,8 +2,8 @@
 # Frontend Conventions
 
 Read this before building or restyling a screen, or before wiring a new endpoint
-into the UI. The token and primitive catalog it builds on lives in
-[design-system.md](design-system.md).
+into the UI. The design tokens it builds on live in
+`apps/web/src/app/globals.css`.
 
 ## Conventions
 
@@ -18,9 +18,10 @@ into the UI. The token and primitive catalog it builds on lives in
   them. To extend one (e.g. give a dialog action a variant), wrap it or pass
   `buttonVariants()` / classes at the call site instead of editing the file.
 
-**Design system:** the full token + primitive catalog lives in
-[design-system.md](design-system.md), with a live reference at the `/design`
-route. Build new screens from these primitives and tokens — don't hand-roll.
+**Design system:** the token + primitive catalog lives in the shadcn/ui
+components under `apps/web/src/components/ui/` and the tokens in
+`apps/web/src/app/globals.css`. Build new screens from these primitives and
+tokens — don't hand-roll.
 
 ## Building a screen
 

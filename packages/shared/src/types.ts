@@ -71,3 +71,110 @@ export interface UploadStats {
   uploads_today: number;
   total_downloads: number;
 }
+
+// --- Filter Runs (the primary entity) ------------------------------------
+
+export type FilterStrategy =
+  | "clip_score"
+  | "basic"
+  | "image_based"
+  | "text_based";
+export type ClipModelName = "ViT-B-32" | "ViT-L-14";
+export type RunStatus = "pending" | "running" | "completed" | "failed";
+
+export interface RunConfig {
+  name: string;
+  source_prefix: string;
+  clip_model: ClipModelName;
+  strategy: FilterStrategy;
+  /** Fraction of pairs to KEEP (top-scoring). 0.30 = DataComp clip_score default. */
+  clip_percentile: number;
+  min_resolution: number;
+  caption_min_tokens: number;
+  caption_max_tokens: number;
+  dedup: boolean;
+}
+
+export interface ShardMetric {
+  shard: string;
+  pairs_in: number;
+  pairs_kept: number;
+  pairs_dropped: number;
+  mean_clip_score: number;
+  kept_mean_clip_score: number;
+  output_key: string | null;
+  metrics_key: string | null;
+}
+
+export interface FilterStats {
+  total_pairs_in: number;
+  total_pairs_kept: number;
+  total_pairs_dropped: number;
+  reduction_pct: number;
+  mean_clip_score: number;
+  clip_score_threshold: number | null;
+  device: string | null;
+}
+
+export interface FilterRun {
+  id: string;
+  config: RunConfig;
+  status: RunStatus;
+  created_at: string;
+  updated_at: string;
+  source_shard_count: number;
+  output_prefix: string | null;
+  metrics_prefix: string | null;
+  shard_metrics: ShardMetric[];
+  stats: FilterStats | null;
+  error: string | null;
+}
+
+export interface DeleteRunResponse {
+  deleted: boolean;
+  id: string;
+}
+
+export interface SourcePrefix {
+  prefix: string;
+  shard_count: number;
+}
+
+export interface RunStats {
+  total_runs: number;
+  completed_runs: number;
+  running_runs: number;
+  failed_runs: number;
+  total_pairs_kept: number;
+  total_pairs_dropped: number;
+  avg_reduction_pct: number;
+}
+
+// --- Pool Explorer -------------------------------------------------------
+
+export interface ShardSummary {
+  key: string;
+  name: string;
+  size_bytes: number;
+  size_human: string;
+  scope: string;
+  run_id: string | null;
+}
+
+export interface ImageTextPair {
+  key: string;
+  caption: string;
+  thumbnail_data_url: string | null;
+  width: number | null;
+  height: number | null;
+  clip_score: number | null;
+  kept: boolean | null;
+}
+
+export interface ShardContents {
+  key: string;
+  scope: string;
+  pair_count: number;
+  shown: number;
+  pairs: ImageTextPair[];
+}

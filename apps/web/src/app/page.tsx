@@ -1,10 +1,6 @@
-import Link from "next/link";
-import { Upload } from "lucide-react";
-
-import { Button } from "@/components/ui/button";
-import { StatsCards } from "@/components/dashboard/stats-cards";
-import { RecentUploadsTable } from "@/components/dashboard/recent-uploads-table";
-import { UploadChart } from "@/components/dashboard/upload-chart";
+import { RunStatsCards } from "@/components/dashboard/run-stats-cards";
+import { RecentRunsTable } from "@/components/dashboard/recent-runs-table";
+import { CreateRunDialog } from "@/components/runs/create-run-dialog";
 
 export default function DashboardPage() {
   return (
@@ -12,25 +8,17 @@ export default function DashboardPage() {
       <div className="animate-fade-in border-b border-border pb-5 flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="page-title">Dashboard</h1>
-          <p className="text-sm text-muted-foreground mt-1.5">
-            Overview of your Backblaze B2 storage activity.
+          <p className="text-sm text-muted-foreground mt-1.5 max-w-prose">
+            DataComp-style image-text dataset curation on Backblaze B2. Filter
+            WebDataset shards by CLIP alignment — B2 is the sole store for the raw
+            pool, filtered output, and quality metrics.
           </p>
         </div>
-        <Button asChild size="sm" className="h-8">
-          <Link href="/upload">
-            <Upload className="h-3.5 w-3.5" />
-            Upload files
-          </Link>
-        </Button>
+        <CreateRunDialog />
       </div>
-      <StatsCards />
-      <div className="grid gap-6 lg:grid-cols-2">
-        <div className="animate-fade-in-up stagger-3">
-          <UploadChart />
-        </div>
-        <div className="animate-fade-in-up stagger-4">
-          <RecentUploadsTable />
-        </div>
+      <RunStatsCards />
+      <div className="animate-fade-in-up stagger-3">
+        <RecentRunsTable />
       </div>
     </div>
   );

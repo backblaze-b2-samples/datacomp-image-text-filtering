@@ -15,4 +15,14 @@ test.describe("Upload flow", () => {
     await page.goto("/");
     await expect(page.locator("body")).toBeVisible();
   });
+
+  test("should display the runs page", async ({ page }) => {
+    await page.goto("/runs");
+    await expect(page).toHaveURL(/runs/);
+  });
+
+  test("should display the pool explorer", async ({ page }) => {
+    await page.goto("/pool");
+    await expect(page).toHaveURL(/pool/);
+  });
 });

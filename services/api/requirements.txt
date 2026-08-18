@@ -9,6 +9,10 @@ python-dotenv>=1.0.0
 pydantic>=2.10.0
 pydantic-settings>=2.7.0
 boto3>=1.35.0
+# Pillow is base (not ML): the seed script renders synthetic pairs and the Pool
+# Explorer builds thumbnails with it. The heavy CLIP stack lives in
+# requirements-ml.txt (torch/torchvision/open_clip_torch/webdataset), excluded
+# from setup and CI so the app boots ML-free.
 Pillow>=11.0.0
 PyPDF2>=3.0.0
 

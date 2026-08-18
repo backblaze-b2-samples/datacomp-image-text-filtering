@@ -41,7 +41,6 @@ Low-severity polish, left for a follow-up; none blocks the core flow.
 - `/files` preview dialog — while the presigned URL is pending, the loading label is screen-reader-only and never escalates, so past ~5s a sighted user sees only an unlabelled shimmer (the dashboard, by contrast, escalates its wait copy)
 - `/upload` File Details — the success toast can overlap the Dimensions row and hide its value while the panel is open
 - 404 route — the breadcrumb title-cases the unknown slug (e.g. "This Route Does Not Exist"), presenting a nonexistent route as a real page name; the rest of the 404 is solid
-- `/design` — the "Go to Upload" button inside the Patterns empty-state demo does not navigate; it is presumably a static sample, but it looks live on a linked primary surface
 
 ## Resolved
 

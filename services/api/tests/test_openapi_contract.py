@@ -34,10 +34,12 @@ def test_openapi_metadata_uses_canonical_local_api_identity():
     schema = app.openapi()
 
     assert schema["info"] == {
-        "title": "Vibe Coding Starter Kit API",
+        "title": "DataComp Image-Text Filtering API",
         "description": (
-            "Local API for the Vibe Coding Starter Kit template, providing file "
-            "upload and management backed by Backblaze B2. This contract "
+            "Local API for DataComp Image-Text Filtering: a DataComp-style dataset "
+            "curation pipeline that streams WebDataset image-text shards from "
+            "Backblaze B2, scores image-text alignment with CLIP (open_clip), and "
+            "writes filtered shards plus quality metrics back to B2. This contract "
             "documents the template's local API, not a hosted public endpoint."
         ),
         "version": "0.1.0",

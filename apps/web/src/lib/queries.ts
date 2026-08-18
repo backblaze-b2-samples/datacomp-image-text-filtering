@@ -8,19 +8,31 @@ import {
 } from "@tanstack/react-query";
 import {
   ApiError,
+  createRun,
   deleteFile,
+  deleteRun,
   getDownloadUrl,
   getFileDetail,
   getFiles,
   getFileStats,
   getHealth,
+  getPoolShard,
+  getPoolShards,
   getPreviewUrl,
+  getRun,
+  getRuns,
+  getRunStats,
+  getSourcePrefixes,
   getUploadActivity,
+  startRun,
+  updateRun,
 } from "@/lib/api-client";
 import type {
   FileMetadata,
   FileMetadataDetail,
-} from "@vibe-coding-starter-kit/shared";
+  FilterRun,
+  RunConfig,
+} from "@datacomp-image-text-filtering/shared";
 
 // Single source of truth for query keys. Keep these tightly scoped so that
 // invalidating "files" doesn't blow away unrelated caches, and so an IDE
@@ -35,6 +47,12 @@ export const qk = {
   preview: (key: string) => [...qk.all, "preview", key] as const,
   detail: (key: string) => [...qk.all, "detail", key] as const,
   health: () => [...qk.all, "health"] as const,
+  runs: () => [...qk.all, "runs"] as const,
+  run: (id: string) => [...qk.all, "runs", id] as const,
+  runStats: () => [...qk.all, "runs", "stats"] as const,
+  sourcePrefixes: () => [...qk.all, "runs", "source-prefixes"] as const,
+  poolShards: (scope: string) => [...qk.all, "pool", "shards", scope] as const,
+  poolShard: (key: string) => [...qk.all, "pool", "shard", key] as const,
 };
 
 export type Health = Awaited<ReturnType<typeof getHealth>>;
@@ -167,5 +185,98 @@ export function useDeleteFile() {
       dropDeletedFileFromCache(qc, fileKey);
       qc.invalidateQueries({ queryKey: qk.all });
     },
+  });
+}
+
+// --- Filter Runs ----------------------------------------------------------
+
+export function useRuns() {
+  return useQuery<FilterRun[], ApiError>({
+    queryKey: qk.runs(),
+    queryFn: getRuns,
+  });
+}
+
+/**
+ * A single run. While its status is `running`, poll every 2s so the detail view
+ * reflects the background filter job's progress without a manual refresh.
+ */
+export function useRun(id: string | undefined) {
+  return useQuery<FilterRun, ApiError>({
+    queryKey: qk.run(id ?? ""),
+    queryFn: () => getRun(id as string),
+    enabled: !!id,
+    refetchInterval: (query) =>
+      query.state.data?.status === "running" ? 2000 : false,
+  });
+}
+
+export function useRunStats() {
+  return useQuery({ queryKey: qk.runStats(), queryFn: getRunStats });
+}
+
+export function useSourcePrefixes({ enabled = true }: QueryGate = {}) {
+  return useQuery({
+    queryKey: qk.sourcePrefixes(),
+    queryFn: getSourcePrefixes,
+    enabled,
+  });
+}
+
+export function useCreateRun() {
+  const qc = useQueryClient();
+  return useMutation<FilterRun, ApiError, RunConfig>({
+    mutationFn: (config) => createRun(config),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.runs() });
+      qc.invalidateQueries({ queryKey: qk.runStats() });
+    },
+  });
+}
+
+export function useUpdateRun(id: string) {
+  const qc = useQueryClient();
+  return useMutation<FilterRun, ApiError, RunConfig>({
+    mutationFn: (config) => updateRun(id, config),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.run(id) });
+      qc.invalidateQueries({ queryKey: qk.runs() });
+    },
+  });
+}
+
+export function useDeleteRun() {
+  const qc = useQueryClient();
+  return useMutation<{ deleted: boolean; id: string }, ApiError, string>({
+    mutationFn: (id) => deleteRun(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.all }),
+  });
+}
+
+export function useStartRun() {
+  const qc = useQueryClient();
+  return useMutation<FilterRun, ApiError, string>({
+    mutationFn: (id) => startRun(id),
+    onSuccess: (run) => {
+      qc.invalidateQueries({ queryKey: qk.run(run.id) });
+      qc.invalidateQueries({ queryKey: qk.runs() });
+    },
+  });
+}
+
+// --- Pool Explorer --------------------------------------------------------
+
+export function usePoolShards(scope: "pool" | "filtered") {
+  return useQuery({
+    queryKey: qk.poolShards(scope),
+    queryFn: () => getPoolShards(scope),
+  });
+}
+
+export function usePoolShard(key: string | undefined) {
+  return useQuery({
+    queryKey: qk.poolShard(key ?? ""),
+    queryFn: () => getPoolShard(key as string),
+    enabled: !!key,
   });
 }

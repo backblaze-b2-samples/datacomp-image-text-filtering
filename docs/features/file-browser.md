@@ -1,8 +1,12 @@
 <!-- last_verified: 2026-07-28 -->
-# Feature: File Browser
+# Feature: Bucket Explorer (File Browser)
 
 ## Purpose
-List, preview, download, and delete files stored in Backblaze B2.
+List, preview, download, and delete **every** object stored in the B2 bucket —
+raw pool shards, filtered output, run manifests, and metrics. This is the
+NON-NEGOTIABLE full-bucket browser; for a shard-level, pair-by-pair view scoped
+to `pool/` + `filtered/`, use the [Pool Explorer](pool-explorer.md). (Presented
+as **Bucket Explorer** in the UI; the route stays `/files`.)
 
 ## Used By
 - UI: `/files` page, file browser component

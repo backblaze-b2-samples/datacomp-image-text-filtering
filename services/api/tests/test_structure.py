@@ -82,6 +82,28 @@ def test_boto3_only_in_repo():
     assert violations == [], "boto3 boundary violations:\n" + "\n".join(violations)
 
 
+ML_MODULES = ("torch", "torchvision", "open_clip", "webdataset")
+# The one authored module allowed to import the heavy ML stack. Keeping it in a
+# single file is what lets the base venv (no requirements-ml.txt) boot and pass
+# every static gate — filtering.py lazy-imports these inside its functions.
+ML_ALLOWED_FILE = APP_ROOT / "service" / "filtering.py"
+
+
+def test_ml_stack_only_in_filtering():
+    """torch/torchvision/open_clip/webdataset may be imported ONLY in
+    app/service/filtering.py (mirrors the boto3-in-repo boundary)."""
+    violations = []
+    for pyfile in _get_python_files(APP_ROOT):
+        if pyfile == ML_ALLOWED_FILE:
+            continue
+        for imp in _get_imports(pyfile):
+            root = imp.split(".")[0]
+            if root in ML_MODULES:
+                rel = pyfile.relative_to(APP_ROOT.parent)
+                violations.append(f"{rel}: ML import '{imp}' outside service/filtering.py")
+    assert violations == [], "ML stack boundary violations:\n" + "\n".join(violations)
+
+
 def test_api_app_python_file_size_limit():
     """Verify authored Python under services/api/app stays within 300 lines."""
     violations = []

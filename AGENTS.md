@@ -20,22 +20,19 @@ infra/railway/     Railway delivery contract (per-service railway.json live at t
 infra/vercel/      Vercel deployment contract
 ```
 
-## 2. Building on This Starter Kit
+## 2. App Structure
 
-When this repo is used as the foundation for a new app, the following pieces are part of the starter contract — keep them. Adapt only what the new use case actually requires.
+This app is a DataComp-style image-text filtering pipeline on B2. Keep these load-bearing pieces intact.
 
-**Keep as-is (do not strip, rename, or replace)**
-- **UI kit / design system.** `apps/web/src/components/ui/` (shadcn primitives), the design tokens in `apps/web/src/app/globals.css`, and the `/design` reference page. Build new screens with these primitives; never edit the generated `components/ui/` files directly. Restyling happens through tokens in `globals.css`.
-- **File Explorer.** `/files` route, `apps/web/src/app/files/`, and `apps/web/src/components/files/`. The Files sidebar entry in `apps/web/src/components/layout/app-sidebar.tsx` stays.
-- **Upload.** `/upload` route, `apps/web/src/app/upload/`, and `apps/web/src/components/upload/`. The Upload sidebar entry stays.
-- The sidebar nav itself (Dashboard, Upload, Files, Settings, plus the Design System utility link).
+**Primary entity — Filter Runs.** `/runs` (+ `/runs/[id]`), `apps/web/src/components/runs/*`, `service/runs.py`, `service/filtering.py`, `service/filter_ops.py`, `repo/runs_store.py`, `runtime/runs.py`. All five lifecycle verbs (create/read/edit/delete/run) are exposed in the UI. Runs are persisted as B2 manifests (`runs/<id>/manifest.json`) — no database.
 
-**Adapt to the new use case**
-- **Dashboard.** `/` route and `apps/web/src/components/dashboard/` (stats cards, upload chart, recent uploads table) are illustrative defaults. Replace them with metrics, charts, and tables that reflect what the new app actually does (e.g. transcripts processed, embeddings indexed, classifications run). New aggregations must flow through the same `runtime -> service -> repo` layering and be exposed via TanStack Query hooks in `apps/web/src/lib/queries.ts` — no bare `useEffect + fetch`.
-- Update `docs/features/dashboard.md` in the same PR as any dashboard change (see §9).
+**Real filter engine.** `service/filtering.py` runs REAL open_clip CLIP scoring and writes real filtered shards + metrics to B2. Never mock or simulate it to run cheaply/key-free.
 
-**Why this contract exists**
-- The UI kit, Files, and Upload pages are the reusable B2-backed scaffolding that makes this a starter kit — stripping them defeats the purpose. The dashboard is the only screen explicitly designed to be rewritten per app.
+**Pool Explorer** (scoped) — `/pool`, `apps/web/src/components/pool/*`, `service/pool.py`. Scoped to `pool/` + `filtered/`. **Bucket Explorer** (full-bucket, NON-NEGOTIABLE keep) — `/files`, `components/files/*`, `service/files.py`. Both coexist. **Ingest** (presigned direct-to-B2 upload) — `/upload`, `components/upload/*`.
+
+**UI kit.** `apps/web/src/components/ui/` (shadcn primitives) + tokens in `globals.css` are generated — never edit them directly; restyle via tokens. Copy `components/settings/settings-form.tsx` (selector + safe-default-hint pattern) for new forms.
+
+**Dashboard.** `/` + `apps/web/src/components/dashboard/*` reflect run activity (run stats + recent runs). New aggregations flow through `runtime -> service -> repo` and TanStack Query hooks in `apps/web/src/lib/queries.ts` — no bare `useEffect + fetch`. Update `docs/features/dashboard.md` with any change (see §9).
 
 ## 3. Architectural Invariants
 
@@ -43,6 +40,8 @@ When this repo is used as the foundation for a new app, the following pieces are
 
 - No backward imports across layers
 - No `boto3` outside `repo/`
+- **ML stack (`torch`/`torchvision`/`open_clip`/`webdataset`) lazy-imported and confined to `service/filtering.py`** — shipped in `requirements-ml.txt` (NOT base `requirements.txt`), excluded from `pnpm run setup` and CI. If absent, a run persists `failed` (POST never 500s).
+- **Device auto-detected** at runtime (CUDA → Apple MPS → CPU, default CPU); never hard-require a GPU.
 - No business logic in route handlers (`runtime/`)
 - All external APIs wrapped in `repo/` adapters
 - All request/response data validated at boundary (Pydantic models)
@@ -72,6 +71,7 @@ When this repo is used as the foundation for a new app, the following pieces are
 |------|-------------|
 | No backward imports | `tests/test_structure.py::test_no_backward_imports` |
 | No boto3 outside repo/ | `tests/test_structure.py::test_boto3_only_in_repo` |
+| ML stack (torch/open_clip/webdataset) only in `service/filtering.py` | `tests/test_structure.py::test_ml_stack_only_in_filtering` |
 | Backend app Python file size < 300 lines | `tests/test_structure.py::test_api_app_python_file_size_limit` |
 | All layers exist | `tests/test_structure.py::test_all_layers_exist` |
 | No bare print() | `ruff` rule T20 |

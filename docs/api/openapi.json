@@ -1,6 +1,15 @@
 {
   "components": {
     "schemas": {
+      "ClipModel": {
+        "description": "open_clip scoring models (ungated OpenAI CLIP weights).",
+        "enum": [
+          "ViT-B-32",
+          "ViT-L-14"
+        ],
+        "title": "ClipModel",
+        "type": "string"
+      },
       "DailyUploadCount": {
         "properties": {
           "date": {
@@ -17,6 +26,24 @@
           "uploads"
         ],
         "title": "DailyUploadCount",
+        "type": "object"
+      },
+      "DeleteRunResponse": {
+        "properties": {
+          "deleted": {
+            "title": "Deleted",
+            "type": "boolean"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "deleted",
+          "id"
+        ],
+        "title": "DeleteRunResponse",
         "type": "object"
       },
       "FileMetadata": {
@@ -294,6 +321,160 @@
         "title": "FileUploadResponse",
         "type": "object"
       },
+      "FilterRun": {
+        "properties": {
+          "config": {
+            "$ref": "#/components/schemas/RunConfig"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "metrics_prefix": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metrics Prefix"
+          },
+          "output_prefix": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output Prefix"
+          },
+          "shard_metrics": {
+            "items": {
+              "$ref": "#/components/schemas/ShardMetric"
+            },
+            "title": "Shard Metrics",
+            "type": "array"
+          },
+          "source_shard_count": {
+            "default": 0,
+            "title": "Source Shard Count",
+            "type": "integer"
+          },
+          "stats": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FilterStats"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "$ref": "#/components/schemas/RunStatus"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "config",
+          "status",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "FilterRun",
+        "type": "object"
+      },
+      "FilterStats": {
+        "properties": {
+          "clip_score_threshold": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clip Score Threshold"
+          },
+          "device": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Device"
+          },
+          "mean_clip_score": {
+            "title": "Mean Clip Score",
+            "type": "number"
+          },
+          "reduction_pct": {
+            "title": "Reduction Pct",
+            "type": "number"
+          },
+          "total_pairs_dropped": {
+            "title": "Total Pairs Dropped",
+            "type": "integer"
+          },
+          "total_pairs_in": {
+            "title": "Total Pairs In",
+            "type": "integer"
+          },
+          "total_pairs_kept": {
+            "title": "Total Pairs Kept",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total_pairs_in",
+          "total_pairs_kept",
+          "total_pairs_dropped",
+          "reduction_pct",
+          "mean_clip_score"
+        ],
+        "title": "FilterStats",
+        "type": "object"
+      },
+      "FilterStrategy": {
+        "description": "DataComp baseline filter families (mirrors DataComp `baselines.py`).",
+        "enum": [
+          "clip_score",
+          "basic",
+          "image_based",
+          "text_based"
+        ],
+        "title": "FilterStrategy",
+        "type": "string"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -305,6 +486,79 @@
           }
         },
         "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "ImageTextPair": {
+        "properties": {
+          "caption": {
+            "title": "Caption",
+            "type": "string"
+          },
+          "clip_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clip Score"
+          },
+          "height": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Height"
+          },
+          "kept": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kept"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "thumbnail_data_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thumbnail Data Url"
+          },
+          "width": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Width"
+          }
+        },
+        "required": [
+          "key",
+          "caption"
+        ],
+        "title": "ImageTextPair",
         "type": "object"
       },
       "PresignUploadRequest": {
@@ -371,6 +625,409 @@
           "expires_in"
         ],
         "title": "PresignUploadResponse",
+        "type": "object"
+      },
+      "RunConfig": {
+        "description": "The knobs a Filter Run is executed with. All finite-value fields are\nenums/bounded numbers so the create/edit form uses selectors, not free text\n(only `name` is free text).",
+        "properties": {
+          "caption_max_tokens": {
+            "default": 256,
+            "maximum": 100000.0,
+            "minimum": 1.0,
+            "title": "Caption Max Tokens",
+            "type": "integer"
+          },
+          "caption_min_tokens": {
+            "default": 2,
+            "maximum": 1000.0,
+            "minimum": 0.0,
+            "title": "Caption Min Tokens",
+            "type": "integer"
+          },
+          "clip_model": {
+            "$ref": "#/components/schemas/ClipModel",
+            "default": "ViT-B-32"
+          },
+          "clip_percentile": {
+            "default": 0.3,
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Clip Percentile",
+            "type": "number"
+          },
+          "dedup": {
+            "default": true,
+            "title": "Dedup",
+            "type": "boolean"
+          },
+          "min_resolution": {
+            "default": 64,
+            "maximum": 8192.0,
+            "minimum": 1.0,
+            "title": "Min Resolution",
+            "type": "integer"
+          },
+          "name": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "source_prefix": {
+            "default": "pool/",
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Source Prefix",
+            "type": "string"
+          },
+          "strategy": {
+            "$ref": "#/components/schemas/FilterStrategy",
+            "default": "clip_score"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "RunConfig",
+        "type": "object"
+      },
+      "RunCreateRequest": {
+        "description": "Body for POST /runs (same validated fields as RunConfig).",
+        "properties": {
+          "caption_max_tokens": {
+            "default": 256,
+            "maximum": 100000.0,
+            "minimum": 1.0,
+            "title": "Caption Max Tokens",
+            "type": "integer"
+          },
+          "caption_min_tokens": {
+            "default": 2,
+            "maximum": 1000.0,
+            "minimum": 0.0,
+            "title": "Caption Min Tokens",
+            "type": "integer"
+          },
+          "clip_model": {
+            "$ref": "#/components/schemas/ClipModel",
+            "default": "ViT-B-32"
+          },
+          "clip_percentile": {
+            "default": 0.3,
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Clip Percentile",
+            "type": "number"
+          },
+          "dedup": {
+            "default": true,
+            "title": "Dedup",
+            "type": "boolean"
+          },
+          "min_resolution": {
+            "default": 64,
+            "maximum": 8192.0,
+            "minimum": 1.0,
+            "title": "Min Resolution",
+            "type": "integer"
+          },
+          "name": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "source_prefix": {
+            "default": "pool/",
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Source Prefix",
+            "type": "string"
+          },
+          "strategy": {
+            "$ref": "#/components/schemas/FilterStrategy",
+            "default": "clip_score"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "RunCreateRequest",
+        "type": "object"
+      },
+      "RunStats": {
+        "properties": {
+          "avg_reduction_pct": {
+            "title": "Avg Reduction Pct",
+            "type": "number"
+          },
+          "completed_runs": {
+            "title": "Completed Runs",
+            "type": "integer"
+          },
+          "failed_runs": {
+            "title": "Failed Runs",
+            "type": "integer"
+          },
+          "running_runs": {
+            "title": "Running Runs",
+            "type": "integer"
+          },
+          "total_pairs_dropped": {
+            "title": "Total Pairs Dropped",
+            "type": "integer"
+          },
+          "total_pairs_kept": {
+            "title": "Total Pairs Kept",
+            "type": "integer"
+          },
+          "total_runs": {
+            "title": "Total Runs",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total_runs",
+          "completed_runs",
+          "running_runs",
+          "failed_runs",
+          "total_pairs_kept",
+          "total_pairs_dropped",
+          "avg_reduction_pct"
+        ],
+        "title": "RunStats",
+        "type": "object"
+      },
+      "RunStatus": {
+        "enum": [
+          "pending",
+          "running",
+          "completed",
+          "failed"
+        ],
+        "title": "RunStatus",
+        "type": "string"
+      },
+      "RunUpdateRequest": {
+        "description": "Body for PUT /runs/{id} \u2014 replaces a *pending* run's config.",
+        "properties": {
+          "caption_max_tokens": {
+            "default": 256,
+            "maximum": 100000.0,
+            "minimum": 1.0,
+            "title": "Caption Max Tokens",
+            "type": "integer"
+          },
+          "caption_min_tokens": {
+            "default": 2,
+            "maximum": 1000.0,
+            "minimum": 0.0,
+            "title": "Caption Min Tokens",
+            "type": "integer"
+          },
+          "clip_model": {
+            "$ref": "#/components/schemas/ClipModel",
+            "default": "ViT-B-32"
+          },
+          "clip_percentile": {
+            "default": 0.3,
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Clip Percentile",
+            "type": "number"
+          },
+          "dedup": {
+            "default": true,
+            "title": "Dedup",
+            "type": "boolean"
+          },
+          "min_resolution": {
+            "default": 64,
+            "maximum": 8192.0,
+            "minimum": 1.0,
+            "title": "Min Resolution",
+            "type": "integer"
+          },
+          "name": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "source_prefix": {
+            "default": "pool/",
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Source Prefix",
+            "type": "string"
+          },
+          "strategy": {
+            "$ref": "#/components/schemas/FilterStrategy",
+            "default": "clip_score"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "RunUpdateRequest",
+        "type": "object"
+      },
+      "ShardContents": {
+        "properties": {
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "pair_count": {
+            "title": "Pair Count",
+            "type": "integer"
+          },
+          "pairs": {
+            "items": {
+              "$ref": "#/components/schemas/ImageTextPair"
+            },
+            "title": "Pairs",
+            "type": "array"
+          },
+          "scope": {
+            "title": "Scope",
+            "type": "string"
+          },
+          "shown": {
+            "title": "Shown",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "key",
+          "scope",
+          "pair_count",
+          "shown",
+          "pairs"
+        ],
+        "title": "ShardContents",
+        "type": "object"
+      },
+      "ShardMetric": {
+        "properties": {
+          "kept_mean_clip_score": {
+            "title": "Kept Mean Clip Score",
+            "type": "number"
+          },
+          "mean_clip_score": {
+            "title": "Mean Clip Score",
+            "type": "number"
+          },
+          "metrics_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metrics Key"
+          },
+          "output_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output Key"
+          },
+          "pairs_dropped": {
+            "title": "Pairs Dropped",
+            "type": "integer"
+          },
+          "pairs_in": {
+            "title": "Pairs In",
+            "type": "integer"
+          },
+          "pairs_kept": {
+            "title": "Pairs Kept",
+            "type": "integer"
+          },
+          "shard": {
+            "title": "Shard",
+            "type": "string"
+          }
+        },
+        "required": [
+          "shard",
+          "pairs_in",
+          "pairs_kept",
+          "pairs_dropped",
+          "mean_clip_score",
+          "kept_mean_clip_score"
+        ],
+        "title": "ShardMetric",
+        "type": "object"
+      },
+      "ShardSummary": {
+        "properties": {
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Id"
+          },
+          "scope": {
+            "title": "Scope",
+            "type": "string"
+          },
+          "size_bytes": {
+            "title": "Size Bytes",
+            "type": "integer"
+          },
+          "size_human": {
+            "title": "Size Human",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "name",
+          "size_bytes",
+          "size_human",
+          "scope"
+        ],
+        "title": "ShardSummary",
+        "type": "object"
+      },
+      "SourcePrefix": {
+        "properties": {
+          "prefix": {
+            "title": "Prefix",
+            "type": "string"
+          },
+          "shard_count": {
+            "title": "Shard Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "prefix",
+          "shard_count"
+        ],
+        "title": "SourcePrefix",
         "type": "object"
       },
       "UploadStats": {
@@ -463,8 +1120,8 @@
     }
   },
   "info": {
-    "description": "Local API for the Vibe Coding Starter Kit template, providing file upload and management backed by Backblaze B2. This contract documents the template's local API, not a hosted public endpoint.",
-    "title": "Vibe Coding Starter Kit API",
+    "description": "Local API for DataComp Image-Text Filtering: a DataComp-style dataset curation pipeline that streams WebDataset image-text shards from Backblaze B2, scores image-text alignment with CLIP (open_clip), and writes filtered shards plus quality metrics back to B2. This contract documents the template's local API, not a hosted public endpoint.",
+    "title": "DataComp Image-Text Filtering API",
     "version": "0.1.0"
   },
   "openapi": "3.1.0",
@@ -996,6 +1653,380 @@
         "summary": "Metrics",
         "tags": [
           "metrics"
+        ]
+      }
+    },
+    "/pool/shard": {
+      "get": {
+        "operationId": "get_pool_shard_endpoint_pool_shard_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "title": "Key",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShardContents"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Pool Shard Endpoint",
+        "tags": [
+          "pool"
+        ]
+      }
+    },
+    "/pool/shards": {
+      "get": {
+        "operationId": "list_pool_shards_endpoint_pool_shards_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "scope",
+            "required": false,
+            "schema": {
+              "default": "pool",
+              "title": "Scope",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ShardSummary"
+                  },
+                  "title": "Response List Pool Shards Endpoint Pool Shards Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Pool Shards Endpoint",
+        "tags": [
+          "pool"
+        ]
+      }
+    },
+    "/runs": {
+      "get": {
+        "operationId": "list_runs_endpoint_runs_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/FilterRun"
+                  },
+                  "title": "Response List Runs Endpoint Runs Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Runs Endpoint",
+        "tags": [
+          "runs"
+        ]
+      },
+      "post": {
+        "operationId": "create_run_endpoint_runs_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RunCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FilterRun"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Run Endpoint",
+        "tags": [
+          "runs"
+        ]
+      }
+    },
+    "/runs/source-prefixes": {
+      "get": {
+        "operationId": "source_prefixes_endpoint_runs_source_prefixes_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SourcePrefix"
+                  },
+                  "title": "Response Source Prefixes Endpoint Runs Source Prefixes Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Source Prefixes Endpoint",
+        "tags": [
+          "runs"
+        ]
+      }
+    },
+    "/runs/stats": {
+      "get": {
+        "operationId": "run_stats_endpoint_runs_stats_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunStats"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Run Stats Endpoint",
+        "tags": [
+          "runs"
+        ]
+      }
+    },
+    "/runs/{run_id}": {
+      "delete": {
+        "operationId": "delete_run_endpoint_runs__run_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteRunResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Run Endpoint",
+        "tags": [
+          "runs"
+        ]
+      },
+      "get": {
+        "operationId": "get_run_endpoint_runs__run_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FilterRun"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Run Endpoint",
+        "tags": [
+          "runs"
+        ]
+      },
+      "put": {
+        "operationId": "update_run_endpoint_runs__run_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RunUpdateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FilterRun"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Run Endpoint",
+        "tags": [
+          "runs"
+        ]
+      }
+    },
+    "/runs/{run_id}/run": {
+      "post": {
+        "description": "Kick off a filter run. Marks it `running`, schedules the real CLIP filter\nas a background task, and returns immediately. Execution NEVER 500s the POST:\na missing ML stack or empty pool persists the run as `failed`.",
+        "operationId": "start_run_endpoint_runs__run_id__run_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FilterRun"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Start Run Endpoint",
+        "tags": [
+          "runs"
         ]
       }
     },

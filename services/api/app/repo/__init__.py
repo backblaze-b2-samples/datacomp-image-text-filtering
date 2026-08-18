@@ -15,10 +15,20 @@ from app.repo.b2_upload import (
     invalidate_listing,
 )
 from app.repo.counter import get_download_count, increment_download_count
+from app.repo.runs_store import (
+    delete_run,
+    list_manifests,
+    list_shards,
+    load_json,
+    load_manifest,
+    put_bytes,
+    save_manifest,
+)
 
 __all__ = [
     "check_connectivity",
     "delete_file",
+    "delete_run",
     "generate_presigned_upload",
     "get_download_count",
     "get_file_metadata",
@@ -29,6 +39,12 @@ __all__ = [
     "increment_download_count",
     "invalidate_listing",
     "list_files",
+    "list_manifests",
+    "list_shards",
+    "load_json",
+    "load_manifest",
     "prewarm_listing",
+    "put_bytes",
+    "save_manifest",
     "upload_file",
 ]

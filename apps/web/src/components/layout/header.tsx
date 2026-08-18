@@ -26,13 +26,14 @@ import { useUploadQueue } from "@/lib/upload-queue-context";
 import { activeUploadLabel } from "@/lib/upload-status";
 
 // Overrides for routes whose label differs from the derived segment
-// (e.g. "/" -> "Dashboard", "/design" -> "Design System").
+// (e.g. "/" -> "Dashboard", "/files" -> "Bucket Explorer").
 const pageTitles: Record<string, string> = {
   "/": "Dashboard",
-  "/upload": "Upload",
-  "/files": "Files",
+  "/runs": "Runs",
+  "/pool": "Pool Explorer",
+  "/files": "Bucket Explorer",
+  "/upload": "Ingest",
   "/settings": "Settings",
-  "/design": "Design System",
 };
 
 // Fallback page label for routes not in the override map: title-case the last

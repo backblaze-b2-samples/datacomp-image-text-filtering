@@ -9,16 +9,17 @@ export default function FilesPage() {
     <div className="space-y-8">
       <div className="animate-fade-in flex flex-wrap items-start justify-between gap-4 border-b border-border pb-5">
         <div className="min-w-0">
-          <h1 className="page-title">Files</h1>
+          <h1 className="page-title">Bucket Explorer</h1>
           <p className="mt-1.5 max-w-prose text-sm text-muted-foreground">
-            Browse and manage your most recent uploads. Click a file to preview
-            it.
+            Browse every object in the B2 bucket — raw pool shards, filtered
+            output, run manifests, and metrics. Click a file to preview it. For a
+            shard-level, pair-by-pair view, use the Pool Explorer.
           </p>
         </div>
         <Button asChild size="sm" className="h-8 shrink-0">
           <Link href="/upload">
             <Upload aria-hidden="true" className="h-3.5 w-3.5" />
-            Upload files
+            Ingest shards
           </Link>
         </Button>
       </div>

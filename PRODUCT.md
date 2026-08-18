@@ -6,20 +6,22 @@ product
 
 ## Users
 
-AI coding agents and "vibe coders" (developers who lean on AI to move fast) who clone
-this kit as the foundation for a new full-stack app. Their context: they want to skip
-the boilerplate loop (dashboard, upload, file browser, cloud storage wiring) and go
-straight to building their app's unique features. They read the repo, keep the shared
-scaffolding, and rebrand + rewrite the dashboard for their own use case.
+ML researchers and AI-lab data engineers who curate billion-scale image-text datasets
+for vision-language model pretraining, plus AI coding agents scaffolding a filtering
+pipeline. Their context: they have noisy web-scraped image-text pairs and need to
+filter them down to high-quality shards by image-text alignment — without pulling the
+pool onto local disk — and want object storage to be the whole pipeline, from raw pool
+to filtered output. They also evaluate B2 as the storage layer for dataset curation.
 
 ## Product Purpose
 
-An engineering-grade full-stack starter kit (Next.js 16 + React 19 + Tailwind v4 +
-shadcn/ui frontend, FastAPI backend) with Backblaze B2 cloud storage integrated out of
-the box. It ships a dashboard, drag-and-drop upload, and a file browser so builders
-start from a working app, not a blank page. Success = a builder can clone it, run it,
-rebrand it via one config file, and trust every screen enough to build on top without
-first fixing it.
+A working implementation of the DataComp filtering workflow (Next.js 16 + React 19 +
+Tailwind v4 + shadcn/ui frontend, FastAPI backend) with Backblaze B2 as the sole
+storage layer. It streams WebDataset `.tar` shards from B2, scores image-text alignment
+with CLIP (open_clip), writes filtered shards + quality metrics back to B2, and exposes
+the whole lifecycle — Filter Runs, a scoped Pool Explorer, and a full Bucket Explorer —
+in a real UI. Success = a data engineer can seed a pool, run a real CLIP filter, and see
+high-quality shards land back in B2 with a measured storage reduction, no second key.
 
 ## Maturity and Support Boundary
 
@@ -33,11 +35,11 @@ and no SLA is provided for the repository software.
 
 ## Brand Personality
 
-Confident, precise, quietly professional. Voice is direct and free of hype ("Stop
-wiring boilerplate and start building"). The interface should feel like a modern
-developer tool — considered, calm, trustworthy — not a marketing showpiece. It is a
-**neutral foundation** that others rebrand: the design carries craft through restraint,
-not through a strong opinionated identity of its own.
+Confident, precise, quietly professional. Voice is direct and free of hype ("filter a
+noisy pool to high-quality shards without pulling it locally"). The interface should
+feel like a modern developer/ML tool — considered, calm, trustworthy — not a marketing
+showpiece. The design carries craft through restraint, letting the data (kept vs
+dropped pairs, CLIP scores, storage reduction) be the focus.
 
 ## Anti-references
 

@@ -4,17 +4,18 @@
 ## Components
 
 - **apps/web/** — Next.js 16 frontend (App Router, Tailwind v4, shadcn/ui)
-  - Dashboard with stats, upload chart, recent uploads
-  - File upload with drag-and-drop, progress tracking
-  - File browser with preview, download, delete
+  - Dashboard with run stats and recent runs
+  - **Filter Runs** — the primary entity: create/read/edit/delete/run, per-shard metrics
+  - **Pool Explorer** — scoped shard viewer for `pool/` + `filtered/` (thumbnail + caption + CLIP score + kept/dropped)
+  - **Bucket Explorer** — full-bucket browse with preview, download, delete
+  - **Ingest** — presigned direct-to-B2 upload of raw shards
   - Dark mode via `next-themes`
 - **services/api/** — FastAPI backend (layered architecture)
-  - REST API for file upload, listing, deletion
-  - B2 S3 integration via boto3
-  - File metadata extraction (images, PDFs)
+  - REST API for Filter Runs, the Pool Explorer, files, and uploads
+  - B2 S3 integration via boto3 (confined to `repo/`)
+  - **DataComp CLIP filter engine** in `service/filtering.py` — lazy-imports the ML stack, auto-detects device, scores image-text alignment, writes filtered shards + metrics
   - Health check endpoint with B2 connectivity verification
-  - Structured JSON logging with request tracing
-  - Prometheus-format metrics endpoint
+  - Structured JSON logging with request tracing, Prometheus-format metrics
 - **packages/shared/** — TypeScript type definitions
   - Mirrors Pydantic models from the API
   - Consumed by `apps/web/` as workspace dependency
@@ -49,13 +50,21 @@ runtime/   FastAPI routes — calls service, never repo directly
 services/api/
   main.py                  App entrypoint, middleware, router registration
   app/
-    types/                 Pydantic models (FileMetadata, UploadStats, etc.)
+    types/                 Pydantic models (runs.py, pool.py, files.py, ...)
     config/                Settings loaded from environment
-    repo/                  B2 S3 client (data access layer)
-    service/               Business logic (upload, files, metadata)
+    repo/                  B2 S3 client + runs_store (data access layer)
+    service/               Business logic (runs, filtering, pool, files, upload)
     runtime/               FastAPI route handlers
+  scripts/seed_pool.py     Synthetic keyless pool generator
+  requirements-ml.txt      Heavy CLIP stack (excluded from setup + CI)
   tests/                   pytest tests (structural + integration)
 ```
+
+The **ML stack boundary** mirrors the boto3 boundary: `torch` / `torchvision` /
+`open_clip` / `webdataset` may be imported ONLY in `app/service/filtering.py`
+(enforced by `tests/test_structure.py::test_ml_stack_only_in_filtering`). They
+are lazy-imported inside functions and shipped in `requirements-ml.txt`, so the
+base venv boots and every static gate passes without them.
 
 ## Boundary Invariants
 
@@ -92,10 +101,14 @@ External provisioning and deployment remain explicit user-approved actions.
 
 ## Data Stores
 
-- **Backblaze B2** — object storage (S3-compatible API)
-  - All uploaded files stored in a single bucket
-  - File listing and metadata via S3 `list_objects_v2` / `head_object`
-  - No application database — B2 is the sole data store
+- **Backblaze B2** — object storage (S3-compatible API), the sole data store (no database). One bucket holds, by prefix:
+  - `pool/` — raw input WebDataset `.tar` shards
+  - `filtered/<run_id>/` — filtered output shards
+  - `metrics/<run_id>/` — per-shard quality metrics JSON
+  - `runs/<id>/manifest.json` — the Filter Run entity (config + status + stats)
+  - `uploads/` — objects added via the Ingest page
+  - S3 ops: `list_objects_v2`, `get_object`, `put_object`, `head_object`, `delete_object(s)`, `generate_presigned_url`
+- The regional S3 endpoint is built at runtime from `B2_REGION` (`https://s3.<B2_REGION>.backblazeb2.com`); no region is hardcoded.
 
 ## External Services
 
@@ -111,10 +124,10 @@ See [docs/SECURITY.md](docs/SECURITY.md) for full security documentation.
 
 ## Data Flows
 
-- **Upload**: Browser -> `POST /upload/presign` (API validates the declared file + signs a PUT) -> Browser PUTs bytes **directly to B2** -> `POST /upload/verify` (API HEADs + Range-sniffs the stored object) -> response
-- **List**: Browser -> `GET /files` -> service calls repo -> returns file list
-- **Download**: Browser -> `GET /files/{key}/download` -> service validates key -> repo generates presigned URL -> browser downloads
-- **Delete**: Browser -> `DELETE /files/{key}` -> service validates key -> repo deletes from B2
+- **Filter Run**: Browser -> `POST /runs` (create pending manifest) -> `POST /runs/{id}/run` (marks running, schedules a FastAPI BackgroundTask) -> `service/filtering.run_filter` streams `pool/` shards from B2, CLIP-scores every pair, applies the strategy, writes `filtered/<id>/*.tar` + `metrics/<id>/*.json` back to B2, updates the manifest to `completed`. The UI polls `GET /runs/{id}` every 2s while running. A missing ML stack or empty pool persists `failed` — the POST never 500s.
+- **Pool Explorer**: Browser -> `GET /pool/shards?scope=pool|filtered` (list shards) -> `GET /pool/shard?key=...` -> service reads the shard from B2, returns image-text pairs (thumbnails as data URLs; scores/kept from the run's metrics JSON for filtered shards).
+- **Ingest (upload)**: Browser -> `POST /upload/presign` -> Browser PUTs bytes **directly to B2** -> `POST /upload/verify` (API HEADs + Range-sniffs the stored object).
+- **List / Download / Delete** (Bucket Explorer): `GET /files`, `GET /files/{key}/download` (presigned), `DELETE /files/{key}`.
 
 ## Observability
 
@@ -137,23 +150,28 @@ silently drift from FastAPI. `GET /metrics` is intentionally server-only.
 
 ## Canonical Files
 
-- Layered API handler: `services/api/app/runtime/upload.py`
-- Service orchestration: `services/api/app/service/upload.py`
+- CLIP filter engine (ML stack lives here only): `services/api/app/service/filtering.py`
+- Pure filter helpers (no ML): `services/api/app/service/filter_ops.py`
+- Filter Run orchestration: `services/api/app/service/runs.py`
+- Run manifest store (B2, repo layer): `services/api/app/repo/runs_store.py`
+- Pool Explorer service: `services/api/app/service/pool.py`
+- Run/pool route handlers: `services/api/app/runtime/runs.py`, `services/api/app/runtime/pool.py`
 - B2 data access (repo layer): `services/api/app/repo/b2_client.py`
-- Pydantic models: `services/api/app/types/` (`files.py`, `upload.py`, `stats.py`, `formatting.py`)
+- Pydantic models: `services/api/app/types/` (`runs.py`, `pool.py`, `files.py`, `upload.py`, `stats.py`)
 - Config (pydantic-settings): `services/api/app/config/settings.py`
+- Seed script: `services/api/scripts/seed_pool.py`
 - Structural tests: `services/api/tests/test_structure.py`
 - OpenAPI contract: `docs/api/openapi.json`
-- OpenAPI exporter: `services/api/scripts/export_openapi.py`
 - Frontend API client: `apps/web/src/lib/api-client.ts`
 - Shared TypeScript types: `packages/shared/src/types.ts`
 
 ## Core Features
 
-- [File Upload](docs/features/file-upload.md)
-- [File Browser](docs/features/file-browser.md)
+- [Filter Runs](docs/features/filter-runs.md)
+- [Pool Explorer](docs/features/pool-explorer.md)
+- [File Upload (Ingest)](docs/features/file-upload.md)
+- [Bucket Explorer](docs/features/file-browser.md)
 - [Dashboard](docs/features/dashboard.md)
-- [Metadata Extraction](docs/features/metadata-extraction.md)
 
 ## References
 

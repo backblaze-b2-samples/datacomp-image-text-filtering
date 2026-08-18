@@ -1,11 +1,18 @@
 import type {
   DailyUploadCount,
+  DeleteRunResponse,
   FileMetadata,
   FileMetadataDetail,
   FileUploadResponse,
+  FilterRun,
   PresignUploadResponse,
+  RunConfig,
+  RunStats,
+  ShardContents,
+  ShardSummary,
+  SourcePrefix,
   UploadStats,
-} from "@vibe-coding-starter-kit/shared";
+} from "@datacomp-image-text-filtering/shared";
 
 // Single-origin deploys (Vercel `services`: one project serving web + API) put
 // the API under /api on the same origin, so no NEXT_PUBLIC_API_URL is needed —
@@ -17,7 +24,7 @@ export const API_BASE =
   (process.env.NODE_ENV === "production" ? "/api" : "http://localhost:8000");
 
 type ApiClientRoute = {
-  method: "delete" | "get" | "post";
+  method: "delete" | "get" | "post" | "put";
   path: string;
 };
 
@@ -41,6 +48,18 @@ export const API_CLIENT_ROUTES = {
   // payload ceiling no longer caps upload size.
   uploadPresign: { method: "post", path: "/upload/presign" },
   uploadVerify: { method: "post", path: "/upload/verify" },
+  // Filter Runs (the primary entity) — full lifecycle.
+  runs: { method: "get", path: "/runs" },
+  createRun: { method: "post", path: "/runs" },
+  runStats: { method: "get", path: "/runs/stats" },
+  sourcePrefixes: { method: "get", path: "/runs/source-prefixes" },
+  run: { method: "get", path: "/runs/{run_id}" },
+  updateRun: { method: "put", path: "/runs/{run_id}" },
+  deleteRun: { method: "delete", path: "/runs/{run_id}" },
+  startRun: { method: "post", path: "/runs/{run_id}/run" },
+  // Pool Explorer (scoped to pool/ + filtered/).
+  poolShards: { method: "get", path: "/pool/shards" },
+  poolShard: { method: "get", path: "/pool/shard" },
 } as const satisfies Record<string, ApiClientRoute>;
 
 /** Typed API error with HTTP status code for caller-side branching. */
@@ -350,4 +369,74 @@ function putFileToStorage(
     }
     xhr.send(file);
   });
+}
+
+// --- Filter Runs ----------------------------------------------------------
+
+function runPath(runId: string, suffix = ""): string {
+  return `/runs/${encodeURIComponent(runId)}${suffix}`;
+}
+
+function jsonInit(method: string, body: unknown): RequestInit {
+  return {
+    method,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  };
+}
+
+export async function getRuns() {
+  return apiFetch<FilterRun[]>(API_CLIENT_ROUTES.runs.path);
+}
+
+export async function getRun(runId: string) {
+  return apiFetch<FilterRun>(runPath(runId));
+}
+
+export async function getRunStats() {
+  return apiFetch<RunStats>(API_CLIENT_ROUTES.runStats.path);
+}
+
+export async function getSourcePrefixes() {
+  return apiFetch<SourcePrefix[]>(API_CLIENT_ROUTES.sourcePrefixes.path);
+}
+
+export async function createRun(config: RunConfig) {
+  return apiFetch<FilterRun>(
+    API_CLIENT_ROUTES.createRun.path,
+    jsonInit(API_CLIENT_ROUTES.createRun.method.toUpperCase(), config)
+  );
+}
+
+export async function updateRun(runId: string, config: RunConfig) {
+  return apiFetch<FilterRun>(
+    runPath(runId),
+    jsonInit(API_CLIENT_ROUTES.updateRun.method.toUpperCase(), config)
+  );
+}
+
+export async function deleteRun(runId: string) {
+  return apiFetch<DeleteRunResponse>(runPath(runId), {
+    method: API_CLIENT_ROUTES.deleteRun.method.toUpperCase(),
+  });
+}
+
+export async function startRun(runId: string) {
+  return apiFetch<FilterRun>(runPath(runId, "/run"), {
+    method: API_CLIENT_ROUTES.startRun.method.toUpperCase(),
+  });
+}
+
+// --- Pool Explorer --------------------------------------------------------
+
+export async function getPoolShards(scope: "pool" | "filtered") {
+  return apiFetch<ShardSummary[]>(
+    `${API_CLIENT_ROUTES.poolShards.path}?scope=${scope}`
+  );
+}
+
+export async function getPoolShard(key: string) {
+  return apiFetch<ShardContents>(
+    `${API_CLIENT_ROUTES.poolShard.path}?key=${encodeURIComponent(key)}`
+  );
 }

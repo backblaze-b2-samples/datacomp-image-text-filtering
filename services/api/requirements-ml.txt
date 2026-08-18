@@ -1,0 +1,19 @@
+# Heavy ML stack for the CLIP filter engine (app/service/filtering.py) ONLY.
+#
+# DELIBERATELY SEPARATE from requirements.txt / requirements.lock: this file is
+# excluded from `pnpm run setup` and CI `test:api`, so the app boots and every
+# static gate passes without the heavy stack. filtering.py lazy-imports these;
+# if they are absent a filter run is persisted as `failed` (the POST never 500s).
+#
+# Install it into the API venv to run a REAL filter:
+#   services/api/.venv/bin/pip install -r services/api/requirements-ml.txt
+#
+# Verified windows for Python 3.12 / macOS-arm64 + Linux (fresh-venv install +
+# real ViT-B-32 load + CLIP scoring proven). open_clip pulls torchvision,
+# huggingface_hub, tqdm transitively; ftfy/regex are its text-preproc deps.
+torch>=2.2,<2.9
+torchvision>=0.17,<0.24
+open_clip_torch>=2.24,<3
+webdataset>=0.2.86,<0.3
+ftfy>=6.1
+regex>=2023.0

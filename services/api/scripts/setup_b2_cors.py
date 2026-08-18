@@ -34,7 +34,7 @@ if str(API_ROOT) not in sys.path:
     sys.path.insert(0, str(API_ROOT))
 from app.config import settings  # noqa: E402
 
-RULE_ID = "vcsk-direct-upload"
+RULE_ID = "datacomp-direct-upload"
 
 
 def out(message: str) -> None:
@@ -47,17 +47,15 @@ def err(message: str) -> None:
 
 def _client():
     # Standalone client (not app.repo.get_s3_client) on purpose: bucket-level
-    # CORS calls sign more reliably with an explicit region derived from the
-    # endpoint, whereas the app client leaves region unset for object ops.
-    host = settings.b2_endpoint.split("://", 1)[-1]
-    region = host.split(".")[1] if host.startswith("s3.") else "us-east-005"
+    # CORS calls sign more reliably with an explicit region, which we take
+    # straight from B2_REGION (the same value the app builds its endpoint from).
     return boto3.client(
         "s3",
-        endpoint_url=settings.b2_endpoint,
-        aws_access_key_id=settings.b2_key_id,
+        endpoint_url=settings.s3_endpoint,
+        aws_access_key_id=settings.b2_application_key_id,
         aws_secret_access_key=settings.b2_application_key,
-        region_name=region,
-        config=Config(signature_version="s3v4", user_agent_extra="b2ai-oss-start"),
+        region_name=settings.b2_region,
+        config=Config(signature_version="s3v4", user_agent_extra="b2ai-datacomp-image-text-filtering"),
     )
 
 
