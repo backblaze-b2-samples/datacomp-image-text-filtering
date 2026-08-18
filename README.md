@@ -9,6 +9,28 @@ The point: you filter a noisy pool down to high-quality shards **without pulling
 - **B2 is the only store** — the raw pool, filtered output, run manifests, and metrics are all objects in one bucket. No database.
 - **Runs on-device** — CLIP scoring runs locally (CPU by default, CUDA/Apple MPS auto-detected). $0 in external API cost; only your B2 credentials.
 
+## What it looks like
+
+**Dashboard** — filter-run totals, pairs kept, and average storage reduction, over a table of the most recent runs.
+
+![Dashboard with run totals, pairs-kept, and average-reduction stats above a recent-runs table](docs/images/dashboard.png)
+
+**Filter Runs** — every CLIP filter job with its strategy, status, kept/in counts, and reduction, plus the full create/run/delete lifecycle.
+
+![Filter Runs list showing each run's strategy, status, kept-vs-in counts, and reduction](docs/images/filter-runs.png)
+
+**Run detail** — a completed run's configuration and results alongside per-shard metrics and the per-pair CLIP scores with kept/dropped decisions.
+
+![Run detail with configuration, results, per-shard metrics, and per-pair CLIP-score decisions](docs/images/run-detail.png)
+
+**Pool Explorer** — open a WebDataset shard to inspect the image-text pairs inside it: thumbnail, caption, and resolution.
+
+![Pool Explorer showing a grid of image-text pairs from a raw WebDataset shard](docs/images/pool-explorer.png)
+
+**Ingest** — upload raw WebDataset shards or image-text assets straight into B2 with a presigned, direct-to-bucket PUT.
+
+![Ingest page with a drag-and-drop zone for direct-to-B2 uploads](docs/images/ingest.png)
+
 ## Quick Start
 
 You need: Node.js ≥ 20, pnpm ≥ 9, Python ≥ 3.12, and a free **[Backblaze B2 account](https://www.backblaze.com/sign-up/ai-cloud-storage?utm_source=github&utm_medium=referral&utm_campaign=ai_artifacts&utm_content=b2ai-datacomp-image-text-filtering)**.
